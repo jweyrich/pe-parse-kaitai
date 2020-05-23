@@ -374,7 +374,7 @@ microsoft_pe_t::mz_placeholder_t::mz_placeholder_t(kaitai::kstream* p__io, micro
 }
 
 void microsoft_pe_t::mz_placeholder_t::_read() {
-    m_magic = m__io->read_u2le();
+    m_magic = m__io->ensure_fixed_contents(std::string("\x4D\x5A", 2));
     m_cblp = m__io->read_u2le();
     m_cp = m__io->read_u2le();
     m_crlc = m__io->read_u2le();

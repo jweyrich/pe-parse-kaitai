@@ -544,7 +544,7 @@ public:
         ~mz_placeholder_t();
 
     private:
-        uint16_t m_magic;
+        std::string m_magic;
         uint16_t m_cblp;
         uint16_t m_cp;
         uint16_t m_crlc;
@@ -567,7 +567,7 @@ public:
         microsoft_pe_t* m__parent;
 
     public:
-        uint16_t magic() const { return m_magic; }
+        std::string magic() const { return m_magic; }
         uint16_t cblp() const { return m_cblp; }
         uint16_t cp() const { return m_cp; }
         uint16_t crlc() const { return m_crlc; }
