@@ -18,11 +18,11 @@ meta:
   endian: le
 doc-ref: http://www.microsoft.com/whdc/system/platform/firmware/PECOFF.mspx
 seq:
-  - id: mz
-    type: mz_placeholder
+  - id: dos_header
+    type: image_dos_header
 instances:
-  pe:
-    pos: mz.lfanew
+  pe_header:
+    pos: dos_header.lfanew
     type: pe_header
 enums:
   pe_format:
@@ -30,7 +30,7 @@ enums:
     0x10b: pe32
     0x20b: pe32_plus
 types:
-  mz_placeholder:
+  image_dos_header:
     seq:
       - id: magic
         contents: "MZ"
@@ -99,7 +99,7 @@ types:
       - id: pe_signature
         contents: ["PE", 0, 0]
       - id: coff_hdr
-        type: coff_header
+        type: image_coff_header
       - id: optional_hdr
         type: optional_header
         size: coff_hdr.size_of_optional_header
@@ -113,23 +113,50 @@ types:
         if: optional_hdr.data_dirs.certificate_table.virtual_address != 0
         size: optional_hdr.data_dirs.certificate_table.size
         type: certificate_table
-  coff_header:
+  image_coff_header:
     doc-ref: 3.3. COFF File Header (Object and Image)
     seq:
       - id: machine
+        doc: |
+          The architecture type of the computer. An image file can only be run on the
+          specified computer or a system that emulates the specified computer.
+        -orig-id: Machine
         type: u2
         enum: machine_type
       - id: number_of_sections
+        doc: |
+          The number of sections. This indicates the size of the section table, which
+          immediately follows the headers. Note that the Windows loader limits the number
+          of sections to 96.
+        -orig-id: NumberOfSections
         type: u2
       - id: time_date_stamp
+        doc: |
+          The low 32 bits of the time stamp of the image. This represents the date and
+          time the image was created by the linker. The value is represented in the number
+          of seconds elapsed since midnight (00:00:00), January 1, 1970, Universal
+          Coordinated Time, according to the system clock.
+        -orig-id: TimeDateStamp
         type: u4
       - id: pointer_to_symbol_table
+        doc: |
+          The offset of the symbol table, in bytes, or zero if no COFF symbol table exists.
+        -orig-id: PointerToSymbolTable
         type: u4
       - id: number_of_symbols
+        doc: |
+          The number of symbols in the symbol table.
+        -orig-id: NumberOfSymbols
         type: u4
       - id: size_of_optional_header
+        doc: |
+          The size of the optional header, in bytes. This value should be 0 for object files.
+        -orig-id: SizeOfOptionalHeader
         type: u2
       - id: characteristics
+        doc: |
+          The characteristics of the image.
+        -orig-id: Characteristics
         type: u2
     instances:
       symbol_table_size:
@@ -149,13 +176,13 @@ types:
         # 3.3.1. Machine Types
         0x0: unknown
         0x1d3: am33
-        0x8664: amd64
+        0x8664: amd64 # IMAGE_FILE_MACHINE_AMD64
         0x1c0: arm
         0xaa64: arm64
         0x1c4: armnt
         0xebc: ebc
-        0x14c: i386
-        0x200: ia64
+        0x14c: i386 # IMAGE_FILE_MACHINE_I386
+        0x200: ia64 # IMAGE_FILE_MACHINE_IA64
         0x9041: m32r
         0x266: mips16
         0x366: mipsfpu
@@ -203,7 +230,7 @@ types:
       #  terminator: 0
       #  encoding: ascii
       section:
-        value: _root.pe.sections[section_number - 1]
+        value: _root.pe_header.sections[section_number - 1]
       data:
         pos: section.pointer_to_raw_data + value
         size: 1

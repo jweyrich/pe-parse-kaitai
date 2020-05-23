@@ -22,22 +22,22 @@ int main(int argc, char *argv[]) {
 	microsoft_pe_t parsed { &kstream };
 
 	// MZ
-	microsoft_pe_t::mz_placeholder_t *mz = parsed.mz();
-	if (mz == nullptr) {
+	microsoft_pe_t::image_dos_header_t *dos_hdr = parsed.dos_header();
+	if (dos_hdr == nullptr) {
 		return EXIT_SUCCESS;
 	}
-	std::cout << "MZ magic: " << std::hex << mz->magic() << std::endl;
-	std::cout << "MZ lfanew: " << std::hex << mz->lfanew() << std::endl;
+	std::cout << "DOS magic: " << std::hex << dos_hdr->magic() << std::endl;
+	std::cout << "DOS lfanew: " << std::hex << dos_hdr->lfanew() << std::endl;
 
 	// PE
-	microsoft_pe_t::pe_header_t *pe_hdr = parsed.pe();
+	microsoft_pe_t::pe_header_t *pe_hdr = parsed.pe_header();
 	if (pe_hdr == nullptr) {
 		return EXIT_SUCCESS;
 	}
 	std::cout << "PE pe_signature: " << pe_hdr->pe_signature() << std::endl;
 
 	// COFF
-	microsoft_pe_t::coff_header_t *coff_hdr = pe_hdr->coff_hdr();
+	microsoft_pe_t::image_coff_header_t *coff_hdr = pe_hdr->coff_hdr();
 	if (coff_hdr == nullptr) {
 		return EXIT_SUCCESS;
 	}

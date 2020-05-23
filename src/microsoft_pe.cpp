@@ -7,18 +7,18 @@
 microsoft_pe_t::microsoft_pe_t(kaitai::kstream* p__io, kaitai::kstruct* p__parent, microsoft_pe_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = this;
-    f_pe = false;
+    f_pe_header = false;
     _read();
 }
 
 void microsoft_pe_t::_read() {
-    m_mz = new mz_placeholder_t(m__io, this, m__root);
+    m_dos_header = new image_dos_header_t(m__io, this, m__root);
 }
 
 microsoft_pe_t::~microsoft_pe_t() {
-    delete m_mz;
-    if (f_pe) {
-        delete m_pe;
+    delete m_dos_header;
+    if (f_pe_header) {
+        delete m_pe_header;
     }
 }
 
@@ -192,7 +192,7 @@ void microsoft_pe_t::data_dir_t::_read() {
 microsoft_pe_t::data_dir_t::~data_dir_t() {
 }
 
-microsoft_pe_t::coff_symbol_t::coff_symbol_t(kaitai::kstream* p__io, microsoft_pe_t::coff_header_t* p__parent, microsoft_pe_t* p__root) : kaitai::kstruct(p__io) {
+microsoft_pe_t::coff_symbol_t::coff_symbol_t(kaitai::kstream* p__io, microsoft_pe_t::image_coff_header_t* p__parent, microsoft_pe_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
     f_section = false;
@@ -221,7 +221,7 @@ microsoft_pe_t::coff_symbol_t::~coff_symbol_t() {
 microsoft_pe_t::section_t* microsoft_pe_t::coff_symbol_t::section() {
     if (f_section)
         return m_section;
-    m_section = _root()->pe()->sections()->at((section_number() - 1));
+    m_section = _root()->pe_header()->sections()->at((section_number() - 1));
     f_section = true;
     return m_section;
 }
@@ -246,7 +246,7 @@ microsoft_pe_t::pe_header_t::pe_header_t(kaitai::kstream* p__io, microsoft_pe_t*
 
 void microsoft_pe_t::pe_header_t::_read() {
     m_pe_signature = m__io->ensure_fixed_contents(std::string("\x50\x45\x00\x00", 4));
-    m_coff_hdr = new coff_header_t(m__io, this, m__root);
+    m_coff_hdr = new image_coff_header_t(m__io, this, m__root);
     m__raw_optional_hdr = m__io->read_bytes(coff_hdr()->size_of_optional_header());
     m__io__raw_optional_hdr = new kaitai::kstream(m__raw_optional_hdr);
     m_optional_hdr = new optional_header_t(m__io__raw_optional_hdr, this, m__root);
@@ -343,37 +343,13 @@ std::string microsoft_pe_t::section_t::body() {
     return m_body;
 }
 
-microsoft_pe_t::certificate_table_t::certificate_table_t(kaitai::kstream* p__io, microsoft_pe_t::pe_header_t* p__parent, microsoft_pe_t* p__root) : kaitai::kstruct(p__io) {
+microsoft_pe_t::image_dos_header_t::image_dos_header_t(kaitai::kstream* p__io, microsoft_pe_t* p__parent, microsoft_pe_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
     _read();
 }
 
-void microsoft_pe_t::certificate_table_t::_read() {
-    m_items = new std::vector<certificate_entry_t*>();
-    {
-        int i = 0;
-        while (!m__io->is_eof()) {
-            m_items->push_back(new certificate_entry_t(m__io, this, m__root));
-            i++;
-        }
-    }
-}
-
-microsoft_pe_t::certificate_table_t::~certificate_table_t() {
-    for (std::vector<certificate_entry_t*>::iterator it = m_items->begin(); it != m_items->end(); ++it) {
-        delete *it;
-    }
-    delete m_items;
-}
-
-microsoft_pe_t::mz_placeholder_t::mz_placeholder_t(kaitai::kstream* p__io, microsoft_pe_t* p__parent, microsoft_pe_t* p__root) : kaitai::kstruct(p__io) {
-    m__parent = p__parent;
-    m__root = p__root;
-    _read();
-}
-
-void microsoft_pe_t::mz_placeholder_t::_read() {
+void microsoft_pe_t::image_dos_header_t::_read() {
     m_magic = m__io->ensure_fixed_contents(std::string("\x4D\x5A", 2));
     m_cblp = m__io->read_u2le();
     m_cp = m__io->read_u2le();
@@ -405,9 +381,107 @@ void microsoft_pe_t::mz_placeholder_t::_read() {
     m_lfanew = m__io->read_u4le();
 }
 
-microsoft_pe_t::mz_placeholder_t::~mz_placeholder_t() {
+microsoft_pe_t::image_dos_header_t::~image_dos_header_t() {
     delete m_res;
     delete m_res2;
+}
+
+microsoft_pe_t::image_coff_header_t::image_coff_header_t(kaitai::kstream* p__io, microsoft_pe_t::pe_header_t* p__parent, microsoft_pe_t* p__root) : kaitai::kstruct(p__io) {
+    m__parent = p__parent;
+    m__root = p__root;
+    f_symbol_table_size = false;
+    f_symbol_name_table_offset = false;
+    f_symbol_name_table_size = false;
+    f_symbol_table = false;
+    _read();
+}
+
+void microsoft_pe_t::image_coff_header_t::_read() {
+    m_machine = static_cast<microsoft_pe_t::image_coff_header_t::machine_type_t>(m__io->read_u2le());
+    m_number_of_sections = m__io->read_u2le();
+    m_time_date_stamp = m__io->read_u4le();
+    m_pointer_to_symbol_table = m__io->read_u4le();
+    m_number_of_symbols = m__io->read_u4le();
+    m_size_of_optional_header = m__io->read_u2le();
+    m_characteristics = m__io->read_u2le();
+}
+
+microsoft_pe_t::image_coff_header_t::~image_coff_header_t() {
+    if (f_symbol_name_table_size) {
+    }
+    if (f_symbol_table) {
+        for (std::vector<coff_symbol_t*>::iterator it = m_symbol_table->begin(); it != m_symbol_table->end(); ++it) {
+            delete *it;
+        }
+        delete m_symbol_table;
+    }
+}
+
+int32_t microsoft_pe_t::image_coff_header_t::symbol_table_size() {
+    if (f_symbol_table_size)
+        return m_symbol_table_size;
+    m_symbol_table_size = (number_of_symbols() * 18);
+    f_symbol_table_size = true;
+    return m_symbol_table_size;
+}
+
+int32_t microsoft_pe_t::image_coff_header_t::symbol_name_table_offset() {
+    if (f_symbol_name_table_offset)
+        return m_symbol_name_table_offset;
+    m_symbol_name_table_offset = (pointer_to_symbol_table() + symbol_table_size());
+    f_symbol_name_table_offset = true;
+    return m_symbol_name_table_offset;
+}
+
+uint32_t microsoft_pe_t::image_coff_header_t::symbol_name_table_size() {
+    if (f_symbol_name_table_size)
+        return m_symbol_name_table_size;
+    std::streampos _pos = m__io->pos();
+    m__io->seek(symbol_name_table_offset());
+    m_symbol_name_table_size = m__io->read_u4le();
+    m__io->seek(_pos);
+    f_symbol_name_table_size = true;
+    return m_symbol_name_table_size;
+}
+
+std::vector<microsoft_pe_t::coff_symbol_t*>* microsoft_pe_t::image_coff_header_t::symbol_table() {
+    if (f_symbol_table)
+        return m_symbol_table;
+    std::streampos _pos = m__io->pos();
+    m__io->seek(pointer_to_symbol_table());
+    int l_symbol_table = number_of_symbols();
+    m_symbol_table = new std::vector<coff_symbol_t*>();
+    m_symbol_table->reserve(l_symbol_table);
+    for (int i = 0; i < l_symbol_table; i++) {
+        m_symbol_table->push_back(new coff_symbol_t(m__io, this, m__root));
+    }
+    m__io->seek(_pos);
+    f_symbol_table = true;
+    return m_symbol_table;
+}
+
+microsoft_pe_t::certificate_table_t::certificate_table_t(kaitai::kstream* p__io, microsoft_pe_t::pe_header_t* p__parent, microsoft_pe_t* p__root) : kaitai::kstruct(p__io) {
+    m__parent = p__parent;
+    m__root = p__root;
+    _read();
+}
+
+void microsoft_pe_t::certificate_table_t::_read() {
+    m_items = new std::vector<certificate_entry_t*>();
+    {
+        int i = 0;
+        while (!m__io->is_eof()) {
+            m_items->push_back(new certificate_entry_t(m__io, this, m__root));
+            i++;
+        }
+    }
+}
+
+microsoft_pe_t::certificate_table_t::~certificate_table_t() {
+    for (std::vector<certificate_entry_t*>::iterator it = m_items->begin(); it != m_items->end(); ++it) {
+        delete *it;
+    }
+    delete m_items;
 }
 
 microsoft_pe_t::optional_header_std_t::optional_header_std_t(kaitai::kstream* p__io, microsoft_pe_t::optional_header_t* p__parent, microsoft_pe_t* p__root) : kaitai::kstruct(p__io) {
@@ -435,80 +509,6 @@ void microsoft_pe_t::optional_header_std_t::_read() {
 microsoft_pe_t::optional_header_std_t::~optional_header_std_t() {
     if (!n_base_of_data) {
     }
-}
-
-microsoft_pe_t::coff_header_t::coff_header_t(kaitai::kstream* p__io, microsoft_pe_t::pe_header_t* p__parent, microsoft_pe_t* p__root) : kaitai::kstruct(p__io) {
-    m__parent = p__parent;
-    m__root = p__root;
-    f_symbol_table_size = false;
-    f_symbol_name_table_offset = false;
-    f_symbol_name_table_size = false;
-    f_symbol_table = false;
-    _read();
-}
-
-void microsoft_pe_t::coff_header_t::_read() {
-    m_machine = static_cast<microsoft_pe_t::coff_header_t::machine_type_t>(m__io->read_u2le());
-    m_number_of_sections = m__io->read_u2le();
-    m_time_date_stamp = m__io->read_u4le();
-    m_pointer_to_symbol_table = m__io->read_u4le();
-    m_number_of_symbols = m__io->read_u4le();
-    m_size_of_optional_header = m__io->read_u2le();
-    m_characteristics = m__io->read_u2le();
-}
-
-microsoft_pe_t::coff_header_t::~coff_header_t() {
-    if (f_symbol_name_table_size) {
-    }
-    if (f_symbol_table) {
-        for (std::vector<coff_symbol_t*>::iterator it = m_symbol_table->begin(); it != m_symbol_table->end(); ++it) {
-            delete *it;
-        }
-        delete m_symbol_table;
-    }
-}
-
-int32_t microsoft_pe_t::coff_header_t::symbol_table_size() {
-    if (f_symbol_table_size)
-        return m_symbol_table_size;
-    m_symbol_table_size = (number_of_symbols() * 18);
-    f_symbol_table_size = true;
-    return m_symbol_table_size;
-}
-
-int32_t microsoft_pe_t::coff_header_t::symbol_name_table_offset() {
-    if (f_symbol_name_table_offset)
-        return m_symbol_name_table_offset;
-    m_symbol_name_table_offset = (pointer_to_symbol_table() + symbol_table_size());
-    f_symbol_name_table_offset = true;
-    return m_symbol_name_table_offset;
-}
-
-uint32_t microsoft_pe_t::coff_header_t::symbol_name_table_size() {
-    if (f_symbol_name_table_size)
-        return m_symbol_name_table_size;
-    std::streampos _pos = m__io->pos();
-    m__io->seek(symbol_name_table_offset());
-    m_symbol_name_table_size = m__io->read_u4le();
-    m__io->seek(_pos);
-    f_symbol_name_table_size = true;
-    return m_symbol_name_table_size;
-}
-
-std::vector<microsoft_pe_t::coff_symbol_t*>* microsoft_pe_t::coff_header_t::symbol_table() {
-    if (f_symbol_table)
-        return m_symbol_table;
-    std::streampos _pos = m__io->pos();
-    m__io->seek(pointer_to_symbol_table());
-    int l_symbol_table = number_of_symbols();
-    m_symbol_table = new std::vector<coff_symbol_t*>();
-    m_symbol_table->reserve(l_symbol_table);
-    for (int i = 0; i < l_symbol_table; i++) {
-        m_symbol_table->push_back(new coff_symbol_t(m__io, this, m__root));
-    }
-    m__io->seek(_pos);
-    f_symbol_table = true;
-    return m_symbol_table;
 }
 
 microsoft_pe_t::annoyingstring_t::annoyingstring_t(kaitai::kstream* p__io, microsoft_pe_t::coff_symbol_t* p__parent, microsoft_pe_t* p__root) : kaitai::kstruct(p__io) {
@@ -597,13 +597,13 @@ std::string microsoft_pe_t::annoyingstring_t::name_from_short() {
     return m_name_from_short;
 }
 
-microsoft_pe_t::pe_header_t* microsoft_pe_t::pe() {
-    if (f_pe)
-        return m_pe;
+microsoft_pe_t::pe_header_t* microsoft_pe_t::pe_header() {
+    if (f_pe_header)
+        return m_pe_header;
     std::streampos _pos = m__io->pos();
-    m__io->seek(mz()->lfanew());
-    m_pe = new pe_header_t(m__io, this, m__root);
+    m__io->seek(dos_header()->lfanew());
+    m_pe_header = new pe_header_t(m__io, this, m__root);
     m__io->seek(_pos);
-    f_pe = true;
-    return m_pe;
+    f_pe_header = true;
+    return m_pe_header;
 }
