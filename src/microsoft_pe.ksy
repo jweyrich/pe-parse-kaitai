@@ -1,3 +1,8 @@
+#
+# Original specification from https://github.com/kaitai-io/kaitai_struct_formats/blob/master/executable/microsoft_pe.ksy
+# LICENSE: CC0-1.0
+#
+
 meta:
   id: microsoft_pe
   title: Microsoft PE (Portable Executable) file format
