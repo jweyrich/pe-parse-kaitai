@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
 	// MZ
 	microsoft_pe_t::image_dos_header_t *dos_hdr = parsed.dos_header();
 	if (dos_hdr == nullptr) {
-		return EXIT_SUCCESS;
+		return EXIT_FAILURE;
 	}
 	std::cout << "DOS magic: " << std::hex << dos_hdr->magic() << std::endl;
 	std::cout << "DOS lfanew: " << std::hex << dos_hdr->lfanew() << std::endl;
@@ -32,17 +32,16 @@ int main(int argc, char *argv[]) {
 	// PE
 	microsoft_pe_t::pe_header_t *pe_hdr = parsed.pe_header();
 	if (pe_hdr == nullptr) {
-		return EXIT_SUCCESS;
+		return EXIT_FAILURE;
 	}
 	std::cout << "PE pe_signature: " << pe_hdr->pe_signature() << std::endl;
 
 	// COFF
 	microsoft_pe_t::image_coff_header_t *coff_hdr = pe_hdr->coff_hdr();
-	if (coff_hdr == nullptr) {
-		return EXIT_SUCCESS;
+	if (coff_hdr != nullptr) {
+		std::cout << "COFF characteristics: " << coff_hdr->characteristics() << std::endl;
+		std::cout << "COFF machine: " << coff_hdr->machine() << std::endl;
 	}
-	std::cout << "COFF characteristics: " << coff_hdr->characteristics() << std::endl;
-	std::cout << "COFF machine: " << coff_hdr->machine() << std::endl;
 	
 	input_stream.close();
 
