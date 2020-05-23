@@ -1,0 +1,43 @@
+diff --git a/kaitai/kaitaistream.cpp b/kaitai/kaitaistream.cpp
+index 9c2effc..b22c39c 100644
+--- a/kaitai/kaitaistream.cpp
++++ b/kaitai/kaitaistream.cpp
+@@ -1,7 +1,18 @@
+ #include <kaitai/kaitaistream.h>
+ 
+-#include <endian.h>
+-#include <byteswap.h>
++#include <machine/endian.h>
++
++#if defined(__APPLE__) // Mac OS X / Darwin features
++#define __LITTLE_ENDIAN __LITTLE_ENDIAN__
++#define __BIG_ENDIAN __BIG_ENDIAN__
++#define __BYTE_ORDER __LITTLE_ENDIAN__
++#include <libkern/OSByteOrder.h>
++#   define bswap_16(x) OSSwapInt16(x)
++#   define bswap_32(x) OSSwapInt32(x)
++#   define bswap_64(x) OSSwapInt64(x)
++#else
++#   include <byteswap.h>
++#endif
+ 
+ #include <iostream>
+ #include <vector>
+@@ -323,6 +334,17 @@ uint64_t kaitai::kstream::get_mask_ones(int n) {
+ // ========================================================================
+ 
+ std::string kaitai::kstream::read_bytes(ssize_t len) {
++#if 0
++    const std::ifstream::pos_type p1 = m_io->tellg();
++    m_io->seekg(0, std::ios::end);
++    const std::ifstream::pos_type p2 = m_io->tellg();
++    m_io->seekg(p1);
++
++    std::cout << "trying to read " << len
++        << " bytes from " << static_cast<size_t>(p1)
++        << " of total " << static_cast<size_t>(p2)
++        << std::endl;
++#endif
+     std::vector<char> result(len);
+     m_io->read(&result[0], len);
+     return std::string(result.begin(), result.end());
